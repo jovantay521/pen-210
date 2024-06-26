@@ -34,3 +34,13 @@ aircrack-ng $CAPTURE -w ~/rockyou.txt
 
 === FILTERING CAP ===
 airdecap-ng -e $ESSID -p $PASSWORD $CAPTURE
+
+=== SCANNING NETWORKS ===
+arp-scan -I $WLAN -l
+nmap -p- -sV -sT -A $IP --open -v
+
+=== ROGUE AP ===
+cp ~/pen-210/conf/hostapd.conf .
+hostapd-mana hostapd.conf
+aircrack-ng $HCCPAX -e $ESSID -w $PASSWORD_LIST
+
