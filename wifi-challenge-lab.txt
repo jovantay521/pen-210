@@ -1,0 +1,11 @@
+# Recon
+
+# OPN
+8.starwars1 
+# WEP
+
+# PSK
+12. password1
+13. wifi-management
+14. bubblegum
+# SAE
